@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HIGONFY — Mystery Round Poll</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green: #2D6A4F;
+    --green-light: #95D5B2;
+    --green-pale: #D8F3DC;
+    --red: #9B2335;
+    --red-light: #FFB3B3;
+    --red-pale: #FFE5E5;
+    --gold: #E9A800;
+    --orange: #FF6F3D;
+    --bg: #F7F6F3;
+    --surface: #FFFFFF;
+    --text: #1A1A1A;
+    --muted: #6B6B6B;
+    --border: #E2E0DA;
+  }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── SHARED HEADER ── */
+  .app-bar {
+    background: var(--text);
+    color: #fff;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .app-bar .logo {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    letter-spacing: .12em;
+    color: var(--orange);
+  }
+  .app-bar .title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+  }
+  .app-bar .mode-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 99px;
+    background: var(--orange);
+    color: #fff;
+    letter-spacing: .06em;
+  }
+
+  /* ── VIEWS ── */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ── LANDING ── */
+  .landing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 53px);
+    padding: 40px 24px;
+    gap: 16px;
+    text-align: center;
+  }
+  .landing h1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: clamp(28px, 6vw, 52px);
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.1;
+  }
+  .landing h1 span { color: var(--orange); }
+  .landing p { color: var(--muted); font-size: 15px; max-width: 380px; }
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+  .btn {
+    padding: 13px 28px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: opacity .15s, transform .1s;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background: var(--orange); color: #fff; }
+  .btn-secondary { background: var(--text); color: #fff; }
+  .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+  .btn:hover { opacity: .88; }
+  .btn:disabled { opacity: .4; cursor: default; }
+
+  /* ── ADMIN ── */
+  .admin-wrap { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .question-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+
+  .q-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    cursor: pointer;
+    transition: border-color .15s;
+  }
+  .q-card:hover { border-color: var(--orange); }
+  .q-card.selected { border-color: var(--orange); background: #FFF5F1; }
+  .q-card.released { border-left: 4px solid var(--orange); }
+  .q-number {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    min-width: 24px;
+    margin-top: 2px;
+  }
+  .q-body { flex: 1; }
+  .q-truth {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    padding: 2px 8px;
+    border-radius: 99px;
+    margin-bottom: 5px;
+  }
+  .q-truth.true { background: var(--green-pale); color: var(--green); }
+  .q-truth.false { background: var(--red-pale); color: var(--red); }
+  .q-text { font-size: 13px; color: var(--text); line-height: 1.5; }
+  .q-reveal { font-size: 12px; color: var(--gold); margin-top: 4px; font-style: italic; }
+  .q-status {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 99px;
+    white-space: nowrap;
+  }
+  .q-status.live { background: #FFF0E8; color: var(--orange); }
+  .q-status.locked { background: #F0F0F0; color: var(--muted); }
+  .q-status.idle { background: transparent; color: transparent; }
+
+  .admin-controls {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .control-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .stat-bar {
+    background: var(--text);
+    border-radius: 12px;
+    padding: 16px 20px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .stat-item { text-align: center; }
+  .stat-item .num { font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 600; }
+  .stat-item .lbl { font-size: 11px; color: rgba(255,255,255,.55); margin-top: 2px; }
+
+  .result-panel {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .result-panel h3 { font-size: 14px; font-weight: 600; margin-bottom: 14px; }
+  .result-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .result-label { font-size: 13px; font-weight: 600; min-width: 52px; }
+  .result-label.t { color: var(--green); }
+  .result-label.f { color: var(--red); }
+  .result-bar-wrap { flex: 1; background: var(--bg); border-radius: 4px; height: 20px; overflow: hidden; }
+  .result-bar { height: 100%; border-radius: 4px; transition: width .4s ease; }
+  .result-bar.t { background: var(--green); }
+  .result-bar.f { background: var(--red); }
+  .result-count { font-size: 13px; font-weight: 600; min-width: 32px; text-align: right; color: var(--muted); }
+  .correct-pct {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+  }
+  .correct-pct.revealed { background: var(--green-pale); color: var(--green); }
+  .correct-pct.hidden { background: var(--bg); color: var(--muted); font-weight: 400; font-size: 13px; }
+
+  /* ── VOTER ── */
+  .voter-wrap { max-width: 480px; margin: 0 auto; padding: 28px 20px 60px; }
+
+  .waiting-screen {
+    text-align: center;
+    padding: 60px 20px;
+  }
+  .waiting-screen h2 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+  .waiting-screen p { color: var(--muted); font-size: 14px; }
+  .pulse {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: var(--orange);
+    margin: 0 auto 24px;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: .4; transform: scale(.8); }
+  }
+
+  .vote-card {
+    background: var(--surface);
+    border-radius: 16px;
+    border: 1.5px solid var(--border);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .vote-q-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--orange);
+    font-weight: 600;
+    letter-spacing: .1em;
+    margin-bottom: 10px;
+  }
+  .vote-q-text {
+    font-size: 17px;
+    font-weight: 500;
+    line-height: 1.5;
+    margin-bottom: 22px;
+  }
+  .vote-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .vote-btn {
+    padding: 18px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all .15s;
+    letter-spacing: .04em;
+  }
+  .vote-btn.true-btn { background: var(--green-pale); color: var(--green); border-color: var(--green-pale); }
+  .vote-btn.false-btn { background: var(--red-pale); color: var(--red); border-color: var(--red-pale); }
+  .vote-btn.true-btn.chosen { background: var(--green); color: #fff; border-color: var(--green); }
+  .vote-btn.false-btn.chosen { background: var(--red); color: #fff; border-color: var(--red); }
+  .vote-btn:disabled { opacity: .5; cursor: default; }
+  .vote-btn:not(:disabled):hover { opacity: .85; }
+
+  .locked-notice {
+    text-align: center;
+    padding: 14px;
+    background: #F5F5F5;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 12px;
+  }
+
+  .reveal-card {
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: 10px;
+    text-align: center;
+  }
+  .reveal-card.correct { background: var(--green-pale); }
+  .reveal-card.wrong { background: var(--red-pale); }
+  .reveal-card .verdict {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .reveal-card.correct .verdict { color: var(--green); }
+  .reveal-card.wrong .verdict { color: var(--red); }
+  .reveal-card .pct { font-size: 14px; color: var(--muted); }
+  .reveal-card .answer-text { font-size: 13px; color: var(--gold); margin-top: 8px; font-style: italic; }
+
+  .voter-name-wrap {
+    margin-bottom: 20px;
+  }
+  .voter-name-wrap input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 15px;
+    background: var(--surface);
+    outline: none;
+  }
+  .voter-name-wrap input:focus { border-color: var(--orange); }
+
+  /* ── ADMIN PASSWORD ── */
+  .pin-wrap {
+    max-width: 320px;
+    margin: 80px auto;
+    text-align: center;
+    padding: 0 20px;
+  }
+  .pin-wrap h2 { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+  .pin-wrap p { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+  .pin-wrap input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    font-size: 22px;
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: .2em;
+    margin-bottom: 12px;
+    outline: none;
+  }
+  .pin-wrap input:focus { border-color: var(--orange); }
+  .pin-error { color: var(--red); font-size: 13px; margin-top: 6px; }
+
+  @media (max-width: 480px) {
+    .admin-wrap { padding: 16px 12px 60px; }
+    .voter-wrap { padding: 16px 12px 60px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app-bar" class="app-bar">
+  <span class="logo">HIGONFY</span>
+  <span class="title">Mystery Round</span>
+  <span id="mode-badge" class="mode-badge">LIVE</span>
+</div>
+
+<!-- LANDING -->
+<div id="view-landing" class="view active">
+  <div class="landing">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.15em;color:var(--orange);margin-bottom:4px;">SMITH COLLECTIVE</div>
+    <h1>Did this actually<br>happen at <span>Smith?</span></h1>
+    <p>True or false — you vote, the host decides if you're right.</p>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="joinAsVoter()">Join as player</button>
+      <button class="btn btn-secondary" onclick="goAdmin()">Host login</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN PIN -->
+<div id="view-pin" class="view">
+  <div class="pin-wrap">
+    <h2>Host login</h2>
+    <p>Enter the 4-digit host PIN to manage the game</p>
+    <input type="password" inputmode="numeric" maxlength="4" id="pin-input" placeholder="••••" oninput="checkPin(this.value)">
+    <div id="pin-error" class="pin-error"></div>
+    <button class="btn btn-outline" onclick="showView('landing')" style="margin-top:12px;width:100%">Back</button>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="view-admin" class="view">
+  <div class="admin-wrap">
+
+    <div class="stat-bar" style="margin-bottom:20px;">
+      <div class="stat-item"><div class="num" id="stat-players">0</div><div class="lbl">Players connected</div></div>
+      <div class="stat-item"><div class="num" id="stat-votes">0</div><div class="lbl">Votes this round</div></div>
+      <div class="stat-item"><div class="num" id="stat-q">—</div><div class="lbl">Active question</div></div>
+      <div style="flex:1"></div>
+      <button class="btn btn-outline" onclick="copyShareLink()" style="color:#fff;border-color:rgba(255,255,255,.3);font-size:13px;">Share link</button>
+    </div>
+
+    <div class="admin-controls">
+      <div class="section-label">Controls</div>
+      <div class="control-row">
+        <button class="btn btn-primary" id="btn-release" onclick="releaseQuestion()" disabled>Release question</button>
+        <button class="btn btn-secondary" id="btn-lock" onclick="lockQuestion()" disabled>Lock voting</button>
+        <button class="btn btn-outline" id="btn-reveal" onclick="revealAnswer()" disabled>Reveal answer</button>
+        <button class="btn btn-outline" style="margin-left:auto;" onclick="resetAll()">Reset game</button>
+      </div>
+      <div id="admin-status" style="font-size:13px;color:var(--muted);">Select a question to begin.</div>
+    </div>
+
+    <div id="result-panel" class="result-panel" style="display:none;">
+      <h3 id="result-title">Results</h3>
+      <div class="result-row">
+        <div class="result-label t">TRUE</div>
+        <div class="result-bar-wrap"><div class="result-bar t" id="bar-true" style="width:0%"></div></div>
+        <div class="result-count" id="count-true">0</div>
+      </div>
+      <div class="result-row">
+        <div class="result-label f">FALSE</div>
+        <div class="result-bar-wrap"><div class="result-bar f" id="bar-false" style="width:0%"></div></div>
+        <div class="result-count" id="count-false">0</div>
+      </div>
+      <div class="correct-pct hidden" id="correct-pct-display">Lock voting to see results</div>
+    </div>
+
+    <div class="section-label">Questions — click to select</div>
+    <div class="question-list" id="q-list"></div>
+
+  </div>
+</div>
+
+<!-- VOTER PANEL -->
+<div id="view-voter" class="view">
+  <div class="voter-wrap">
+    <div id="voter-name-section" class="voter-name-wrap">
+      <div class="section-label" style="margin-bottom:6px;">Your name</div>
+      <input type="text" id="voter-name-input" placeholder="Enter your name to join..." maxlength="30" onkeydown="if(event.key==='Enter')setVoterName()">
+      <button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="setVoterName()">Join game</button>
+    </div>
+    <div id="voter-game-section" style="display:none;">
+      <div id="voter-waiting" class="waiting-screen">
+        <div class="pulse"></div>
+        <h2>Waiting for the host...</h2>
+        <p>Jen will release the next question any second now.</p>
+      </div>
+      <div id="voter-question" style="display:none;">
+        <div class="vote-card">
+          <div class="vote-q-num" id="v-q-num">QUESTION 1 OF 8</div>
+          <div class="vote-q-text" id="v-q-text"></div>
+          <div class="vote-btns">
+            <button class="vote-btn true-btn" id="btn-vote-true" onclick="castVote('true')">TRUE</button>
+            <button class="vote-btn false-btn" id="btn-vote-false" onclick="castVote('false')">FALSE</button>
+          </div>
+          <div id="locked-notice" class="locked-notice" style="display:none;">Voting is locked — waiting for the reveal</div>
+        </div>
+        <div id="reveal-block" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────
+const QUESTIONS = [
+  {
+    id: 1,
+    text: "A resident submitted a work order requesting a bed extension. They were an amputee and needed the extra length.",
+    answer: true,
+    reveal: null
+  },
+  {
+    id: 2,
+    text: "A work order was raised to mow the grass on a resident balcony. It was artificial.",
+    answer: true,
+    reveal: null
+  },
+  {
+    id: 3,
+    text: "A work order was raised to remove a dead possum from a balcony.",
+    answer: false,
+    reveal: "It was a passion fruit vine. Very much alive."
+  },
+  {
+    id: 4,
+    text: "More than one golf buggy was stolen from Smith Collective. Under 24/7 security watch.",
+    answer: true,
+    reveal: null
+  },
+  {
+    id: 5,
+    text: "Our senior FM was bitten by a ferocious poodle. On their first day on the job.",
+    answer: true,
+    reveal: null
+  },
+  {
+    id: 6,
+    text: "An ex-maintenance officer was caught driving the buggy to the food court for lunch.",
+    answer: false,
+    reveal: "He drove into the gutter eyeing the meter maids. Priorities."
+  },
+  {
+    id: 7,
+    text: "A blocked shower drain work order was raised. The drain was a Woolies bag the resident put there to catch hair.",
+    answer: true,
+    reveal: null
+  },
+  {
+    id: 8,
+    text: "A resident reported a snake. Maintenance attended and found it was a garden hose.",
+    answer: false,
+    reveal: "It was a 2.5m python. Maintenance were not prepared."
+  }
+];
+
+const ADMIN_PIN = "2026";
+const STORAGE_KEY = "higonfy_poll_state";
+const CHANNEL_NAME = "higonfy_poll";
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let myVoterId = null;
+let myVote = null;       // 'true' | 'false' | null
+let isAdmin = false;
+let selectedQ = null;    // question id for admin selection
+let pollInterval = null;
+
+// Game state (synced via localStorage + BroadcastChannel)
+function getState() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultState();
+  } catch { return defaultState(); }
+}
+function defaultState() {
+  return {
+    activeQuestion: null,   // question id or null
+    locked: false,
+    revealed: false,
+    votes: {},              // { voterId: { name, vote, questionId } }
+    players: {}             // { voterId: name }
+  };
+}
+function saveState(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try {
+    const bc = new BroadcastChannel(CHANNEL_NAME);
+    bc.postMessage({ type: 'state_update', state });
+    bc.close();
+  } catch {}
+}
+
+// BroadcastChannel listener (same-device tabs)
+let bc;
+try {
+  bc = new BroadcastChannel(CHANNEL_NAME);
+  bc.onmessage = (e) => {
+    if (e.data.type === 'state_update') {
+      applyState(e.data.state);
+    }
+  };
+} catch {}
+
+// ── VIEWS ─────────────────────────────────────────────────────────────────
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + id).classList.add('active');
+  const badge = document.getElementById('mode-badge');
+  if (id === 'admin') { badge.textContent = 'HOST'; badge.style.background = '#1A1A1A'; badge.style.border = '1px solid rgba(255,255,255,.2)'; }
+  else { badge.textContent = 'LIVE'; badge.style.background = 'var(--orange)'; }
+}
+
+function goAdmin() {
+  showView('pin');
+  setTimeout(() => document.getElementById('pin-input').focus(), 100);
+}
+
+function checkPin(val) {
+  if (val.length === 4) {
+    if (val === ADMIN_PIN) {
+      isAdmin = true;
+      document.getElementById('pin-error').textContent = '';
+      showView('admin');
+      renderAdminQuestions();
+      startPolling();
+    } else {
+      document.getElementById('pin-error').textContent = 'Incorrect PIN — try again';
+      document.getElementById('pin-input').value = '';
+    }
+  }
+}
+
+function joinAsVoter() {
+  myVoterId = 'v_' + Math.random().toString(36).slice(2, 9);
+  showView('voter');
+  // Check if already named
+  const savedName = sessionStorage.getItem('higonfy_name');
+  if (savedName) {
+    finaliseJoin(savedName);
+  }
+  startPolling();
+}
+
+function setVoterName() {
+  const name = document.getElementById('voter-name-input').value.trim();
+  if (!name) return;
+  sessionStorage.setItem('higonfy_name', name);
+  finaliseJoin(name);
+}
+
+function finaliseJoin(name) {
+  const state = getState();
+  state.players[myVoterId] = name;
+  saveState(state);
+  document.getElementById('voter-name-section').style.display = 'none';
+  document.getElementById('voter-game-section').style.display = 'block';
+  applyState(state);
+}
+
+// ── ADMIN ACTIONS ─────────────────────────────────────────────────────────
+function renderAdminQuestions() {
+  const list = document.getElementById('q-list');
+  const state = getState();
+  list.innerHTML = QUESTIONS.map(q => {
+    const isActive = state.activeQuestion === q.id;
+    const statusClass = isActive ? (state.locked ? 'locked' : 'live') : 'idle';
+    const statusText = isActive ? (state.locked ? 'LOCKED' : 'LIVE') : '';
+    return `
+    <div class="q-card ${selectedQ === q.id ? 'selected' : ''} ${isActive ? 'released' : ''}"
+         onclick="selectQ(${q.id})">
+      <div class="q-number">${q.id}</div>
+      <div class="q-body">
+        <div class="q-truth ${q.answer ? 'true' : 'false'}">${q.answer ? 'TRUE' : 'FALSE'}</div>
+        <div class="q-text">${q.text}</div>
+        ${q.reveal ? `<div class="q-reveal">ANSWER: ${q.reveal}</div>` : ''}
+      </div>
+      <div class="q-status ${statusClass}">${statusText}</div>
+    </div>`;
+  }).join('');
+}
+
+function selectQ(id) {
+  selectedQ = id;
+  const state = getState();
+  const isActive = state.activeQuestion === id;
+  const locked = state.locked;
+  document.getElementById('btn-release').disabled = isActive;
+  document.getElementById('btn-lock').disabled = !isActive || locked;
+  document.getElementById('btn-reveal').disabled = !locked;
+  document.getElementById('admin-status').textContent =
+    isActive
+      ? locked ? `Q${id} is locked. You can reveal the answer.` : `Q${id} is live — votes coming in.`
+      : `Q${id} selected. Press "Release question" to go live.`;
+  renderAdminQuestions();
+  updateResultPanel(state);
+}
+
+function releaseQuestion() {
+  if (!selectedQ) return;
+  const state = getState();
+  state.activeQuestion = selectedQ;
+  state.locked = false;
+  state.revealed = false;
+  // Clear votes for this question
+  Object.keys(state.votes).forEach(k => {
+    if (state.votes[k].questionId === selectedQ) delete state.votes[k];
+  });
+  saveState(state);
+  document.getElementById('btn-release').disabled = true;
+  document.getElementById('btn-lock').disabled = false;
+  document.getElementById('btn-reveal').disabled = true;
+  document.getElementById('admin-status').textContent = `Q${selectedQ} is live — waiting for votes.`;
+  document.getElementById('result-panel').style.display = 'block';
+  renderAdminQuestions();
+}
+
+function lockQuestion() {
+  const state = getState();
+  state.locked = true;
+  saveState(state);
+  document.getElementById('btn-lock').disabled = true;
+  document.getElementById('btn-reveal').disabled = false;
+  document.getElementById('admin-status').textContent = `Voting locked. Press "Reveal answer" when ready.`;
+  updateResultPanel(state);
+}
+
+function revealAnswer() {
+  const state = getState();
+  state.revealed = true;
+  saveState(state);
+  document.getElementById('btn-reveal').disabled = true;
+  updateResultPanel(state);
+}
+
+function resetAll() {
+  if (!confirm('Reset the entire game? All votes will be cleared.')) return;
+  saveState(defaultState());
+  selectedQ = null;
+  myVote = null;
+  document.getElementById('btn-release').disabled = true;
+  document.getElementById('btn-lock').disabled = true;
+  document.getElementById('btn-reveal').disabled = true;
+  document.getElementById('result-panel').style.display = 'none';
+  document.getElementById('admin-status').textContent = 'Select a question to begin.';
+  renderAdminQuestions();
+}
+
+function updateResultPanel(state) {
+  const qId = state.activeQuestion;
+  if (!qId) return;
+  const q = QUESTIONS.find(x => x.id === qId);
+  const votes = Object.values(state.votes).filter(v => v.questionId === qId);
+  const trueVotes = votes.filter(v => v.vote === 'true').length;
+  const falseVotes = votes.filter(v => v.vote === 'false').length;
+  const total = votes.length;
+  const truePct = total ? Math.round((trueVotes / total) * 100) : 0;
+  const falsePct = total ? Math.round((falseVotes / total) * 100) : 0;
+
+  document.getElementById('result-title').textContent = `Q${qId} results (${total} vote${total !== 1 ? 's' : ''})`;
+  document.getElementById('bar-true').style.width = truePct + '%';
+  document.getElementById('bar-false').style.width = falsePct + '%';
+  document.getElementById('count-true').textContent = trueVotes;
+  document.getElementById('count-false').textContent = falseVotes;
+
+  const correctAnswer = q.answer ? 'true' : 'false';
+  const correctVotes = q.answer ? trueVotes : falseVotes;
+  const correctPct = total ? Math.round((correctVotes / total) * 100) : 0;
+
+  const el = document.getElementById('correct-pct-display');
+  if (state.revealed) {
+    el.className = 'correct-pct revealed';
+    el.textContent = `${correctPct}% got it right — answer is ${correctAnswer.toUpperCase()}${q.reveal ? ': ' + q.reveal : ''}`;
+  } else if (state.locked) {
+    el.className = 'correct-pct hidden';
+    el.textContent = 'Press "Reveal answer" to show who got it right';
+  } else {
+    el.className = 'correct-pct hidden';
+    el.textContent = 'Lock voting to see results';
+  }
+}
+
+function updateAdminStats(state) {
+  document.getElementById('stat-players').textContent = Object.keys(state.players).length;
+  const qId = state.activeQuestion;
+  document.getElementById('stat-q').textContent = qId ? `Q${qId}` : '—';
+  const votes = qId ? Object.values(state.votes).filter(v => v.questionId === qId).length : 0;
+  document.getElementById('stat-votes').textContent = votes;
+}
+
+function copyShareLink() {
+  const url = window.location.href.split('#')[0];
+  navigator.clipboard.writeText(url).then(() => {
+    alert('Link copied! Share this URL with your team.');
+  }).catch(() => {
+    prompt('Copy this link to share:', url);
+  });
+}
+
+// ── VOTER ACTIONS ─────────────────────────────────────────────────────────
+function castVote(vote) {
+  if (!myVoterId) return;
+  const state = getState();
+  if (state.locked) return;
+  const qId = state.activeQuestion;
+  if (!qId) return;
+  const name = sessionStorage.getItem('higonfy_name') || myVoterId;
+  myVote = vote;
+  state.votes[myVoterId] = { name, vote, questionId: qId };
+  saveState(state);
+  updateVoterButtons(vote, state.locked);
+}
+
+function updateVoterButtons(vote, locked) {
+  const tb = document.getElementById('btn-vote-true');
+  const fb = document.getElementById('btn-vote-false');
+  if (!tb) return;
+  tb.className = 'vote-btn true-btn' + (vote === 'true' ? ' chosen' : '');
+  fb.className = 'vote-btn false-btn' + (vote === 'false' ? ' chosen' : '');
+  tb.disabled = locked;
+  fb.disabled = locked;
+  document.getElementById('locked-notice').style.display = locked ? 'block' : 'none';
+}
+
+// ── APPLY STATE (both admin + voter) ──────────────────────────────────────
+function applyState(state) {
+  if (isAdmin) {
+    renderAdminQuestions();
+    updateAdminStats(state);
+    if (state.activeQuestion) {
+      document.getElementById('result-panel').style.display = 'block';
+      updateResultPanel(state);
+      // Sync button states
+      const locked = state.locked;
+      const revealed = state.revealed;
+      document.getElementById('btn-release').disabled = true;
+      document.getElementById('btn-lock').disabled = locked;
+      document.getElementById('btn-reveal').disabled = !locked || revealed;
+    }
+    return;
+  }
+
+  // Voter view
+  const gameSection = document.getElementById('voter-game-section');
+  if (!gameSection || gameSection.style.display === 'none') return;
+
+  const waiting = document.getElementById('voter-waiting');
+  const questionDiv = document.getElementById('voter-question');
+
+  if (!state.activeQuestion) {
+    waiting.style.display = 'block';
+    questionDiv.style.display = 'none';
+    myVote = null;
+    return;
+  }
+
+  const qId = state.activeQuestion;
+  const q = QUESTIONS.find(x => x.id === qId);
+  waiting.style.display = 'none';
+  questionDiv.style.display = 'block';
+
+  document.getElementById('v-q-num').textContent = `QUESTION ${qId} OF ${QUESTIONS.length}`;
+  document.getElementById('v-q-text').textContent = q.text;
+
+  // Restore vote if it exists for this question
+  const existingVote = state.votes[myVoterId];
+  if (existingVote && existingVote.questionId === qId) {
+    myVote = existingVote.vote;
+  } else if (!existingVote || existingVote.questionId !== qId) {
+    myVote = null;
+  }
+
+  updateVoterButtons(myVote, state.locked);
+
+  // Reveal block
+  const revealBlock = document.getElementById('reveal-block');
+  if (state.revealed && state.locked) {
+    const correctAnswer = q.answer ? 'true' : 'false';
+    const isCorrect = myVote === correctAnswer;
+    const votes = Object.values(state.votes).filter(v => v.questionId === qId);
+    const total = votes.length;
+    const correctVotes = votes.filter(v => v.vote === correctAnswer).length;
+    const correctPct = total ? Math.round((correctVotes / total) * 100) : 0;
+    revealBlock.style.display = 'block';
+    revealBlock.innerHTML = `
+      <div class="reveal-card ${isCorrect ? 'correct' : 'wrong'}">
+        <div class="verdict">${isCorrect ? 'You got it!' : 'Not quite!'}</div>
+        <div class="pct">${correctPct}% of players got this right</div>
+        ${q.reveal ? `<div class="answer-text">${q.reveal}</div>` : ''}
+      </div>`;
+  } else {
+    revealBlock.style.display = 'none';
+    revealBlock.innerHTML = '';
+  }
+}
+
+// ── POLLING (for cross-device — re-reads localStorage) ───────────────────
+function startPolling() {
+  if (pollInterval) clearInterval(pollInterval);
+  pollInterval = setInterval(() => {
+    const state = getState();
+    applyState(state);
+  }, 1200);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+// Check if returning as voter with session
+window.addEventListener('load', () => {
+  const savedName = sessionStorage.getItem('higonfy_name');
+  if (savedName && !isAdmin) {
+    // Don't auto-join — let them click in
+  }
+});
+</script>
+</body>
+</html>
